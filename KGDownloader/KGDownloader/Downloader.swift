@@ -12,6 +12,8 @@ import Alamofire
 
 // MARK: - 搜索结果
 class SearchData: Codable {
+    var error_code: Int?
+    var error_msg: String?
     var data: SearchLists?
 }
 
@@ -69,6 +71,10 @@ enum DownloadState {
     case failed
 }
 
+enum MyError: Error {
+    case requestError
+}
+
 class Downloader: ObservableObject {
     var subscriptions = Set<AnyCancellable>()
 
@@ -76,7 +82,7 @@ class Downloader: ObservableObject {
     @Published var userId: String = "1562760404"
     @Published var searchText: String = ""
     @Published var result: [SongViewModel] = []
-    @Published var error: String = ""
+    @Published var errormsg: String = ""
     @Published var loading: Bool = false
     
     func search() {
@@ -87,10 +93,15 @@ class Downloader: ObservableObject {
             .tryMap { response in
                 switch response.result {
                 case .success(let data):
-                    let hashs = data.data?.lists.compactMap { $0.FileHash }
-                    return hashs ?? []
+                    if data.error_code == 0 {
+                        let hashs = data.data?.lists.compactMap { $0.FileHash }
+                        return hashs ?? []
+                    } else {
+                        self.errormsg = data.error_msg ?? "搜索出错"
+                        throw MyError.requestError
+                    }
                 case .failure(let error):
-                    self.error = "搜索出错"
+                    self.errormsg = "搜索出错"
                     throw error
                 }
             }
@@ -106,7 +117,7 @@ class Downloader: ObservableObject {
                         case .success(let song):
                             return song.data.map { $0.encode_album_audio_id }
                         case .failure(let error):
-                            self.error = "获取hash出错"
+                            self.errormsg = "获取hash出错"
                             throw error
                         }
                     }
@@ -124,10 +135,10 @@ class Downloader: ObservableObject {
                     .tryMap { response in
                         switch response.result {
                         case .success(let playInfo):
-                            self.error = ""
+                            self.errormsg = ""
                             return playInfo
                         case .failure(let error):
-                            self.error = "获取播放地址错误: \(error.localizedDescription)"
+                            self.errormsg = "获取播放地址错误: \(error.localizedDescription)"
                             throw error
                         }
                     }

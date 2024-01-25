@@ -21,8 +21,8 @@ struct CustomCell: View {
                 Button(action: {
                     if songVM.isPlaying {
                         AudioPlayer.shared.pause()
-                        downloader.result.forEach { $0.isPlaying = false }
                     } else {
+                        downloader.result.forEach { $0.isPlaying = false }
                         AudioPlayer.shared.play(songVM: songVM)
                     }
                 }, label: {
@@ -80,7 +80,7 @@ struct ContentView: View {
             HStack(content: {
                 Text("result: ")
                     .frame(width: 60, alignment: .center)
-                Text(downloader.error)
+                Text(downloader.errormsg)
                     .foregroundColor(.red)
                 Spacer()
             })
@@ -95,6 +95,16 @@ struct ContentView: View {
                 List(downloader.result, id: \.song.album_audio_id) { item in
                     CustomCell(downloader: downloader, songVM: item)
                 }
+            }
+            HStack {
+                Text("文件默认保存在下载文件夹")
+                Button {
+                    let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
+                    NSWorkspace.shared.open(downloadsURL)
+                } label: {
+                    Text("打开")
+                }
+                Spacer()
             }
         }
         .padding()
