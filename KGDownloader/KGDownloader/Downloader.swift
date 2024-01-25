@@ -79,7 +79,7 @@ class Downloader: ObservableObject {
     var subscriptions = Set<AnyCancellable>()
 
     @Published var token: String = ""
-    @Published var userId: String = "0"
+    @Published var userId: String = ""
     @Published var searchText: String = ""
     @Published var result: [SongViewModel] = []
     @Published var errormsg: String = ""
