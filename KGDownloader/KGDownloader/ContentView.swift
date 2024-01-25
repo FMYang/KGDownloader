@@ -19,9 +19,9 @@ struct CustomCell: View {
                     .foregroundColor(.red)
                 Spacer()
                 Button(action: {
-                    downloader.result.forEach { $0.isPlaying = false }
                     if songVM.isPlaying {
                         AudioPlayer.shared.pause()
+                        downloader.result.forEach { $0.isPlaying = false }
                     } else {
                         AudioPlayer.shared.play(songVM: songVM)
                     }
