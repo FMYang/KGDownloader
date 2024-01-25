@@ -207,35 +207,15 @@ class Downloader: ObservableObject {
             let savePath = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0].appendingPathComponent(song.song.audio_name + ".mp3")
             return (savePath, [.createIntermediateDirectories, .removePreviousFile])
         }
-        print(song.song.play_url)
         APIService.alamofire.download(song.song.play_url, headers: nil, to: destination)
             .downloadProgress(closure: { progress in
                 let downloadProgress = progress.fractionCompleted
                 song.downloadState = .downloading(downloadProgress)
-//                print(downloadProgress)
             })
             .response { response in
                 switch response.result {
-                case .success(let url):
+                case .success:
                     song.downloadState = .finished
-                    print("下载完成 \(url?.absoluteString ?? "")")
-//                    if let local = url {
-//                        let savePanel = NSOpenPanel()
-//                        savePanel.canCreateDirectories = true
-//                        savePanel.canChooseDirectories = true
-//                        savePanel.canChooseFiles = false
-//                        
-//                        savePanel.begin { (result) in
-//                            if result.rawValue == NSApplication.ModalResponse.OK.rawValue, let destinationURL = savePanel.url?.appendingPathComponent(response.response?.suggestedFilename ?? local.lastPathComponent) {
-//                                do {
-//                                    try FileManager.default.moveItem(at: local, to: destinationURL)
-//                                    print("文件已下载到：\(destinationURL.path)")
-//                                } catch {
-//                                    print("移动文件失败: \(error.localizedDescription)")
-//                                }
-//                            }
-//                        }
-//                    }
                 case .failure(let error):
                     print(error)
                     song.downloadState = .failed
@@ -244,7 +224,6 @@ class Downloader: ObservableObject {
     }
     
     func signature(encodeId: String) -> String {
-        print("fm \(userId)")
         let ts = String(Int(Date().timeIntervalSince1970 * 1000))
         let mid = "c3c3374152df945246969fee3f15f108"
         let uuid = mid
