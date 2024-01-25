@@ -185,7 +185,7 @@ class APIService {
         if let bodyData = response.request?.httpBody {
             body = String(data: bodyData, encoding: .utf8) ?? "nil"
         }
-        let statusCode = response.response?.statusCode ?? 404
+        let statusCode = response.response?.statusCode ?? -1
         var result: String = ""
         let headers = response.request?.allHTTPHeaderFields ?? [:]
         

@@ -79,22 +79,52 @@ class Downloader: ObservableObject {
     var subscriptions = Set<AnyCancellable>()
 
     @Published var token: String = ""
-    @Published var userId: String = "1562760404"
+    @Published var userId: String = "0"
     @Published var searchText: String = ""
     @Published var result: [SongViewModel] = []
     @Published var errormsg: String = ""
     @Published var loading: Bool = false
     
+    var page = 1
+    
     func search() {
+        page = 1
+        if token.isEmpty {
+            search1()
+        } else {
+            searchSong()
+        }
+    }
+    
+    func searchPrevious() {
+        if page <= 1 { return }
+        page -= 1
+        if token.isEmpty {
+            search1()
+        } else {
+            searchSong()
+        }
+    }
+    
+    func searchNext() {
+        page += 1
+        if token.isEmpty {
+            search1()
+        } else {
+            searchSong()
+        }
+    }
+    
+    func searchSong() {
         result = []
         // 1.获取hash
         loading = true
-        APIService.request(target: ListAPI.search(searchText), type: SearchData.self)
+        APIService.request(target: ListAPI.search(searchText, page), type: SearchData.self)
             .tryMap { response in
                 switch response.result {
                 case .success(let data):
                     if data.error_code == 0 {
-                        let hashs = data.data?.lists.compactMap { $0.FileHash }
+                        let hashs = data.data?.lists.compactMap { ($0.FileHash ?? "", $0.MixSongID ?? "") }
                         return hashs ?? []
                     } else {
                         self.errormsg = data.error_msg ?? "搜索出错"
@@ -105,13 +135,14 @@ class Downloader: ObservableObject {
                     throw error
                 }
             }
-            .flatMap { resultArr -> Publishers.Sequence<Array<String>, Error> in
-                return Publishers.Sequence(sequence: resultArr)
+            .flatMap { resultArr -> Publishers.Sequence<Array<(String, String)>, Error> in
+                // hash数组的元素，一个一个发射
+                return Publishers.Sequence(sequence: resultArr )
             }
             .eraseToAnyPublisher()
-            .flatMap { hash -> AnyPublisher<String?, Error> in
+            .flatMap { (hash, mixSongID) -> AnyPublisher<String?, Error> in
                 // 2.根据hash获取encode_album_audio_id
-                return APIService.request(target: ListAPI.songInfo(hash), type: SongData.self)
+                return APIService.request(target: ListAPI.songInfo(hash, mixSongID), type: SongData.self)
                     .tryMap { response in
                         switch response.result {
                         case .success(let song):
@@ -123,12 +154,6 @@ class Downloader: ObservableObject {
                     }
                     .eraseToAnyPublisher()
             }
-            .collect()
-            .eraseToAnyPublisher()
-            .flatMap { resultArr -> Publishers.Sequence<Array<String?>, Error> in
-                return Publishers.Sequence(sequence: resultArr)
-            }
-            .eraseToAnyPublisher()
             .flatMap { [unowned self] encodeId -> AnyPublisher<PlayInfo?, Error> in
                 // 3.根据encode_album_audio_id获取完整的播放信息
                 return APIService.request(target: ListAPI.playInfo(self.time(), self.token, encodeId ?? "", self.signature(encodeId: encodeId ?? ""), self.userId), type: PlayInfo.self)
@@ -144,7 +169,7 @@ class Downloader: ObservableObject {
                     }
                     .eraseToAnyPublisher()
             }
-            .collect()
+            .collect() // 收集结果，放到数组里
             .eraseToAnyPublisher()
             .sink(receiveCompletion: { [weak self] completion in
                 self?.loading = false
@@ -155,51 +180,54 @@ class Downloader: ObservableObject {
             .store(in: &subscriptions)
     }
     
-//    func search1() {
-//        // 1.获取hash
-//        APIService.request(target: ListAPI.search(searchText), type: SearchData.self)
-//            .tryMap { response in
-//                switch response.result {
-//                case .success(let data):
-//                    let hashs = data.data?.lists.compactMap { $0.FileHash }
-//                    return hashs ?? []
-//                case .failure(let error):
-//                    self.error = "搜索出错"
-//                    throw error
-//                }
-//            }
-//            .flatMap { resultArr -> Publishers.Sequence<Array<String>, Error> in
-//                return Publishers.Sequence(sequence: resultArr)
-//            }
-//            .eraseToAnyPublisher()
-//            .flatMap { hash -> AnyPublisher<Song?, Error> in
-//                // 2.根据hash获取encode_album_audio_id
-//                return APIService.request(target: ListAPI.songInfo(hash), type: PlayInfo.self)
-//                    .tryMap { response in
-//                        switch response.result {
-//                        case .success(let info):
-//                            return info.data
-//                        case .failure(let error):
-//                            self.error = "获取hash出错"
-//                            throw error
-//                        }
-//                    }
-//                    .eraseToAnyPublisher()
-//            }
-//            .collect()
-//            .eraseToAnyPublisher()
-//            .sink { completion in
-//            } receiveValue: { [weak self] value in
-//                if value.count > 0 {
-//                    self?.error = ""
-//                } else {
-//                    self?.error = "获取播放地址出错"
-//                }
-//                let data = value.compactMap { $0 }
-//                self?.result = data
-//            }
-//            .store(in: &subscriptions)
-//    }
+    func search1() {
+        result = []
+        // 1.获取hash
+        loading = true
+        APIService.request(target: ListAPI.search(searchText, page), type: SearchData.self)
+            .tryMap { response in
+                switch response.result {
+                case .success(let data):
+                    let hashs = data.data?.lists.compactMap { ($0.FileHash ?? "", $0.MixSongID ?? "") }
+                    return hashs ?? []
+                case .failure(let error):
+                    self.errormsg = "搜索出错"
+                    throw error
+                }
+            }
+            .flatMap { resultArr -> Publishers.Sequence<Array<(String, String)>, Error> in
+                return Publishers.Sequence(sequence: resultArr)
+            }
+            .eraseToAnyPublisher()
+            .flatMap { (hash, mixSongId) -> AnyPublisher<Song?, Error> in
+                // 2.根据hash获取encode_album_audio_id
+                return APIService.request(target: ListAPI.songInfo(hash, mixSongId), type: PlayInfo.self)
+                    .tryMap { response in
+                        switch response.result {
+                        case .success(let info):
+                            return info.data
+                        case .failure(let error):
+                            self.errormsg = "获取hash出错"
+                            throw error
+                        }
+                    }
+                    .eraseToAnyPublisher()
+            }
+            .collect()
+            .eraseToAnyPublisher()
+            .sink { [weak self] completion in
+                self?.loading = false
+            } receiveValue: { [weak self] value in
+                if value.count > 0 {
+                    self?.errormsg = ""
+                } else {
+                    self?.errormsg = "获取播放地址出错"
+                }
+                let data = value.compactMap { $0 }
+                self?.result = data.map { SongViewModel(song: $0) }
+            }
+            .store(in: &subscriptions)
+    }
     
     func download(song: SongViewModel) {
         song.downloadState = .downloading(0.0)

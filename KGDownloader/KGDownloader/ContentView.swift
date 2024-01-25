@@ -10,7 +10,7 @@ import SwiftUI
 struct CustomCell: View {
     @ObservedObject var downloader: Downloader
     @ObservedObject var songVM: SongViewModel
-
+    
     var body: some View {
         VStack(alignment: .leading) {
             HStack(content: {
@@ -97,6 +97,13 @@ struct ContentView: View {
                 }
             }
             HStack {
+                Button("上一页") {
+                    downloader.searchPrevious()
+                }
+                Button("下一页") {
+                    downloader.searchNext()
+                }
+                Spacer()
                 Text("文件默认保存在下载文件夹")
                 Button {
                     let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
@@ -104,7 +111,6 @@ struct ContentView: View {
                 } label: {
                     Text("打开")
                 }
-                Spacer()
             }
         }
         .padding()
