@@ -51,6 +51,11 @@ extension ListAPI: APITarget {
     }
     
     var time: String {
-        String(format: "%.0f", Date().timeIntervalSince1970)
+        //        String(format: "%.0f", Date().timeIntervalSince1970)
+        let currentDate = Date()
+        let timestamp = Int64(currentDate.timeIntervalSince1970 * 1000)
+        let timestampString = String(timestamp)
+        
+        return timestampString
     }
 }

@@ -22,7 +22,7 @@ class SearchLists: Codable {
 }
 
 class SearchItem: Codable {
-    var FileHash: String?
+    var HQFileHash: String?
     // album_audio_id
     var MixSongID: String?
 }
@@ -79,7 +79,7 @@ class Downloader: ObservableObject {
     var subscriptions = Set<AnyCancellable>()
 
     @Published var token: String = ""
-    @Published var userId: String = ""
+    @Published var userId: String = "1562760404"
     @Published var searchText: String = ""
     @Published var result: [SongViewModel] = []
     @Published var errormsg: String = ""
@@ -116,6 +116,7 @@ class Downloader: ObservableObject {
     }
     
     func searchSong() {
+        errormsg = ""
         result = []
         // 1.获取hash
         loading = true
@@ -124,7 +125,7 @@ class Downloader: ObservableObject {
                 switch response.result {
                 case .success(let data):
                     if data.error_code == 0 {
-                        let hashs = data.data?.lists.compactMap { ($0.FileHash ?? "", $0.MixSongID ?? "") }
+                        let hashs = data.data?.lists.compactMap { ($0.HQFileHash ?? "", $0.MixSongID ?? "") }
                         return hashs ?? []
                     } else {
                         self.errormsg = data.error_msg ?? "搜索出错"
@@ -147,9 +148,10 @@ class Downloader: ObservableObject {
                         switch response.result {
                         case .success(let song):
                             return song.data.map { $0.encode_album_audio_id }
-                        case .failure(let error):
-                            self.errormsg = "获取hash出错"
-                            throw error
+                        case .failure:
+//                            self.errormsg = "获取hash出错"
+//                            throw error
+                            return nil
                         }
                     }
                     .eraseToAnyPublisher()
@@ -163,8 +165,9 @@ class Downloader: ObservableObject {
                             self.errormsg = ""
                             return playInfo
                         case .failure(let error):
-                            self.errormsg = "获取播放地址错误: \(error.localizedDescription)"
-                            throw error
+//                            self.errormsg = "获取播放地址错误: \(error.localizedDescription)"
+//                            throw error
+                            return nil
                         }
                     }
                     .eraseToAnyPublisher()
@@ -181,6 +184,7 @@ class Downloader: ObservableObject {
     }
     
     func search1() {
+        errormsg = ""
         result = []
         // 1.获取hash
         loading = true
@@ -188,7 +192,7 @@ class Downloader: ObservableObject {
             .tryMap { response in
                 switch response.result {
                 case .success(let data):
-                    let hashs = data.data?.lists.compactMap { ($0.FileHash ?? "", $0.MixSongID ?? "") }
+                    let hashs = data.data?.lists.compactMap { ($0.HQFileHash ?? "", $0.MixSongID ?? "") }
                     return hashs ?? []
                 case .failure(let error):
                     self.errormsg = "搜索出错"
@@ -206,9 +210,10 @@ class Downloader: ObservableObject {
                         switch response.result {
                         case .success(let info):
                             return info.data
-                        case .failure(let error):
-                            self.errormsg = "获取hash出错"
-                            throw error
+                        case .failure(_):
+//                            self.errormsg = "获取hash出错"
+//                            throw error
+                            return nil
                         }
                     }
                     .eraseToAnyPublisher()
@@ -221,7 +226,7 @@ class Downloader: ObservableObject {
                 if value.count > 0 {
                     self?.errormsg = ""
                 } else {
-                    self?.errormsg = "获取播放地址出错"
+                    self?.errormsg = "获取歌曲信息出错"
                 }
                 let data = value.compactMap { $0 }
                 self?.result = data.map { SongViewModel(song: $0) }

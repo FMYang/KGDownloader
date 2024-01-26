@@ -14,9 +14,7 @@ struct CustomCell: View {
     var body: some View {
         VStack(alignment: .leading) {
             HStack(content: {
-                Text(songVM.song.audio_name)
-                Text("\((songVM.song.is_free_part == 1) ? "(vip)" : "")")
-                    .foregroundColor(.red)
+                Text(songVM.song.audio_name) + Text(" \((songVM.song.is_free_part == 1) ? "(vip)" : "")").foregroundColor(.red)
                 Spacer()
                 Button(action: {
                     if songVM.isPlaying {
